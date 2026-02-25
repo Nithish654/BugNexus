@@ -59,7 +59,10 @@ export default function Dashboard() {
     try {
       setStatus(statuses[0]);
       const apiUrl = import.meta.env.VITE_API_URL || '';
-      const response = await axios.post(`${apiUrl}/api/generate`, { url, type });
+      const response = await axios.post(
+        `${apiUrl}/generate`,
+        { url, type }
+     );
       
       if (response.data.success) {
         setReportData(response.data);
