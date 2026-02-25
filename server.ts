@@ -1,18 +1,30 @@
 import express from "express";
-import { createServer as createViteServer } from "vite";
-import { GoogleGenAI } from "@google/genai";
-import dotenv from "dotenv";
 import cors from "cors";
+import dotenv from "dotenv";
+import { GoogleGenAI } from "@google/genai";
+import path from "path";
+import { fileURLToPath } from "url";
 
 dotenv.config();
 
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
-const PORT = Number(process.env.PORT) || 3000;
+const PORT = process.env.PORT || 3000;
 
 app.use(cors());
 app.use(express.json());
 
-// API routes
+// Root route for Railway health check (matches what you see in browser)
+app.get("/", (req, res) => {
+  res.send("🚀 AI QA Agent Backend is Running");
+});
+
+// API health check
+app.get("/api/health", (req, res) => {
+  res.json({ status: "ok", message: "Backend API is operational" });
+});
+
+// The main QA generation route
 app.post("/api/generate", async (req, res) => {
   const { url, type } = req.body;
 
@@ -22,12 +34,11 @@ app.post("/api/generate", async (req, res) => {
 
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) {
-    return res.status(500).json({ success: false, error: "Gemini API key is not configured" });
+    return res.status(500).json({ success: false, error: "Gemini API key is not configured on the server" });
   }
 
   try {
     const ai = new GoogleGenAI({ apiKey });
-    
     const response = await ai.models.generateContent({
       model: "gemini-3-flash-preview",
       contents: `Perform a comprehensive production-ready QA analysis for a ${type || 'general'} website: ${url}. 
@@ -63,30 +74,19 @@ app.post("/api/generate", async (req, res) => {
     });
   } catch (error) {
     console.error("Error generating report:", error);
-    res.status(500).json({ success: false, error: "Failed to generate report" });
+    res.status(500).json({ success: false, error: "Failed to generate report. Check server logs." });
   }
 });
 
-// Health check
-app.get("/api/health", (req, res) => {
-  res.json({ status: "ok", message: "🚀 AI QA Agent Backend is Running" });
-});
-
-async function startServer() {
-  // Vite middleware for development
-  if (process.env.NODE_ENV !== "production") {
-    const vite = await createViteServer({
-      server: { middlewareMode: true },
-      appType: "spa",
-    });
-    app.use(vite.middlewares);
-  } else {
-    app.use(express.static("dist"));
-  }
-
-  app.listen(PORT, "0.0.0.0", () => {
-    console.log(`Server running on http://localhost:${PORT}`);
+// Serve static files in production (optional for Railway if you only use it for API)
+if (process.env.NODE_ENV === "production") {
+  app.use(express.static(path.join(__dirname, "dist")));
+  app.get("*", (req, res, next) => {
+    if (req.path.startsWith("/api")) return next();
+    res.sendFile(path.join(__dirname, "dist", "index.html"));
   });
 }
 
-startServer();
+app.listen(PORT, () => {
+  console.log(`Server is running on port ${PORT}`);
+});

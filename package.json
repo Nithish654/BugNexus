@@ -9,6 +9,7 @@
     "preview": "vite preview",
     "clean": "rm -rf dist",
     "lint": "tsc --noEmit",
+    "start": "tsx server.ts",
     "deploy:gh": "npm run build && gh-pages -d dist"
   },
   "dependencies": {
