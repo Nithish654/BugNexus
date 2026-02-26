@@ -11,7 +11,6 @@ import IssueTable from '../components/IssueTable';
 import Layout from '../components/Layout';
 import { GenerateResponse, WebsiteType } from '../types';
 import { historyService } from '../services/historyService';
-import { geminiService } from '../services/geminiService';
 
 export default function Dashboard() {
   const [searchParams] = useSearchParams();
@@ -72,11 +71,11 @@ export default function Dashboard() {
 
     try {
       setStatus(statuses[0]);
+      const API = import.meta.env.VITE_API_URL || '';
+      const response = await axios.post(`${API}/generate`, { url, type });
       
-      // Call Gemini directly from the frontend (following the rules)
-      const data = await geminiService.generateReport(url, type);
-      
-      if (data.success) {
+      if (response.data.success) {
+        const data = response.data as GenerateResponse;
         setReportData(data);
         setShowSuccess(true);
         
@@ -95,11 +94,11 @@ export default function Dashboard() {
         
         setTimeout(() => setShowSuccess(false), 3000);
       } else {
-        setError(data.error || 'Failed to generate report.');
+        setError(response.data.error || 'Failed to generate report.');
       }
     } catch (err: any) {
       console.error(err);
-      setError(err.message || 'An unexpected error occurred during testing. Please check your connection.');
+      setError(err.response?.data?.error || 'An unexpected error occurred during testing. Please check your backend connection.');
     } finally {
       clearInterval(statusInterval);
       setIsLoading(false);
