@@ -71,8 +71,8 @@ export default function Dashboard() {
 
     try {
       setStatus(statuses[0]);
-      const apiUrl = import.meta.env.VITE_API_URL || '';
-      const response = await axios.post(`${apiUrl}/api/generate`, { url, type });
+      const API = import.meta.env.VITE_API_URL || '';
+      const response = await axios.post(`${API}/generate`, { url, type });
       
       if (response.data.success) {
         const data = response.data as GenerateResponse;

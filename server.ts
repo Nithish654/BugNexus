@@ -25,7 +25,7 @@ app.get("/api/health", (req, res) => {
 });
 
 // The main QA generation route
-app.post("/api/generate", async (req, res) => {
+app.post("/generate", async (req, res) => {
   const { url, type } = req.body;
 
   if (!url) {
