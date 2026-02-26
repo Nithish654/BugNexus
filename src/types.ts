@@ -53,3 +53,13 @@ export interface GenerateResponse {
     brokenLinks: number;
   };
 }
+
+export interface HistoryItem {
+  id: string;
+  url: string;
+  type: WebsiteType;
+  date: string;
+  overallScore: number;
+  riskLevel: 'High' | 'Medium' | 'Low';
+  response: GenerateResponse;
+}

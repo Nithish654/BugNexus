@@ -1,30 +1,39 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import axios from 'axios';
-import { Zap, ChevronLeft, LayoutDashboard, History, Settings, LogOut, Globe, AlertCircle, Download, Share2 } from 'lucide-react';
-import { Link, useSearchParams, useNavigate } from 'react-router-dom';
+import { Zap, ChevronLeft, Globe, AlertCircle, Download, Share2, Search, CheckCircle2 } from 'lucide-react';
+import { useSearchParams, useNavigate, useLocation } from 'react-router-dom';
 import URLInput from '../components/URLInput';
 import Loader from '../components/Loader';
 import ReportDisplay from '../components/ReportDisplay';
 import DashboardMetrics from '../components/DashboardMetrics';
 import IssueTable from '../components/IssueTable';
+import Layout from '../components/Layout';
 import { GenerateResponse, WebsiteType } from '../types';
+import { historyService } from '../services/historyService';
 
 export default function Dashboard() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
+  const location = useLocation();
   const type = searchParams.get('type') as WebsiteType;
 
   const [isLoading, setIsLoading] = useState(false);
   const [status, setStatus] = useState('');
   const [reportData, setReportData] = useState<GenerateResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [showSuccess, setShowSuccess] = useState(false);
 
   useEffect(() => {
     if (!type) {
       navigate('/select-type');
     }
-  }, [type, navigate]);
+    
+    // Check if we're viewing a report from history
+    if (location.state?.reportData) {
+      setReportData(location.state.reportData);
+    }
+  }, [type, navigate, location.state]);
 
   const typeLabels: Record<WebsiteType, string> = {
     portfolio: 'Personal / Portfolio',
@@ -40,6 +49,7 @@ export default function Dashboard() {
     setIsLoading(true);
     setError(null);
     setReportData(null);
+    setShowSuccess(false);
     
     const statuses = [
       `Initializing AI agents for ${typeLabels[type]}...`,
@@ -65,7 +75,24 @@ export default function Dashboard() {
       const response = await axios.post(`${apiUrl}/api/generate`, { url, type });
       
       if (response.data.success) {
-        setReportData(response.data);
+        const data = response.data as GenerateResponse;
+        setReportData(data);
+        setShowSuccess(true);
+        
+        // Save to history
+        if (data.executiveSummary) {
+          historyService.saveHistory({
+            id: Date.now().toString(),
+            url,
+            type,
+            date: new Date().toISOString(),
+            overallScore: data.executiveSummary.overallScore,
+            riskLevel: data.executiveSummary.riskLevel,
+            response: data
+          });
+        }
+        
+        setTimeout(() => setShowSuccess(false), 3000);
       } else {
         setError(response.data.error || 'Failed to generate report.');
       }
@@ -82,172 +109,166 @@ export default function Dashboard() {
   if (!type) return null;
 
   return (
-    <motion.div 
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      className="flex h-screen overflow-hidden bg-background"
-    >
-      {/* Sidebar */}
-      <aside className="w-64 border-r border-border bg-zinc-900/50 hidden lg:flex flex-col">
-        <div className="p-6 border-b border-border">
-          <Link to="/" className="flex items-center gap-2">
-            <div className="w-8 h-8 bg-emerald-500 rounded-lg flex items-center justify-center">
-              <Zap className="text-white w-5 h-5 fill-current" />
-            </div>
-            <span className="font-bold text-lg tracking-tight">BugNexus <span className="text-emerald-500">AI</span></span>
-          </Link>
+    <Layout>
+      <header className="h-16 border-b border-border flex items-center justify-between px-4 sm:px-8 sticky top-0 bg-background/80 backdrop-blur-md z-20">
+        <div className="flex items-center gap-2 sm:gap-4 min-w-0">
+          <button 
+            onClick={() => navigate('/select-type')}
+            className="p-2 hover:bg-white/5 rounded-lg transition-colors shrink-0"
+          >
+            <ChevronLeft className="w-5 h-5 text-zinc-400" />
+          </button>
+          <div className="h-4 w-px bg-border mx-1 sm:mx-2 shrink-0" />
+          <h1 className="font-bold text-sm sm:text-lg flex items-center gap-2 truncate">
+            <Globe className="w-4 h-4 text-emerald-500 shrink-0" />
+            <span className="hidden xs:inline">Testing:</span> <span className="text-emerald-400 truncate">{typeLabels[type]}</span>
+          </h1>
         </div>
-        
-        <nav className="flex-1 p-4 space-y-2">
-          <button className="w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-emerald-500/10 text-emerald-400 font-medium">
-            <LayoutDashboard className="w-5 h-5" />
-            Dashboard
-          </button>
-          <button className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-zinc-500 hover:text-zinc-300 hover:bg-white/5 transition-all">
-            <History className="w-5 h-5" />
-            History
-          </button>
-          <button className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-zinc-500 hover:text-zinc-300 hover:bg-white/5 transition-all">
-            <Settings className="w-5 h-5" />
-            Settings
-          </button>
-        </nav>
-
-        <div className="p-4 border-t border-border">
-          <button className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-zinc-500 hover:text-red-400 hover:bg-red-500/5 transition-all">
-            <LogOut className="w-5 h-5" />
-            Logout
-          </button>
+        <div className="flex items-center gap-3 shrink-0">
+          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-emerald-500 to-cyan-500 shadow-lg shadow-emerald-500/20" />
+          <span className="text-sm font-bold hidden sm:inline">Demo User</span>
         </div>
-      </aside>
+      </header>
 
-      {/* Main Content */}
-      <main className="flex-1 overflow-y-auto custom-scrollbar">
-        <header className="h-16 border-b border-border flex items-center justify-between px-8 sticky top-0 bg-background/80 backdrop-blur-md z-20">
-          <div className="flex items-center gap-4">
-            <Link to="/select-type" className="p-2 hover:bg-white/5 rounded-lg transition-colors">
-              <ChevronLeft className="w-5 h-5 text-zinc-400" />
-            </Link>
-            <div className="h-4 w-px bg-border mx-2" />
-            <h1 className="font-bold text-lg flex items-center gap-2">
-              <Globe className="w-4 h-4 text-emerald-500" />
-              Testing: <span className="text-emerald-400">{typeLabels[type]}</span>
-            </h1>
-          </div>
-          <div className="flex items-center gap-4">
-            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-emerald-500 to-cyan-500 shadow-lg shadow-emerald-500/20" />
-            <span className="text-sm font-medium hidden sm:inline">Demo User</span>
-          </div>
-        </header>
-
-        <div className="p-8 max-w-7xl mx-auto">
-          <AnimatePresence mode="wait">
-            {!reportData && !isLoading && (
+      <div className="p-4 sm:p-8 max-w-7xl mx-auto">
+        <AnimatePresence mode="wait">
+          {!reportData && !isLoading && (
+            <motion.div 
+              key="input"
+              initial={{ y: 20, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              exit={{ y: -20, opacity: 0 }}
+              className="text-center py-8 sm:py-12"
+            >
               <motion.div 
-                key="input"
-                initial={{ y: 20, opacity: 0 }}
-                animate={{ y: 0, opacity: 1 }}
-                exit={{ y: -20, opacity: 0 }}
-                className="text-center py-12"
+                initial={{ scale: 0.9 }}
+                animate={{ scale: 1 }}
+                className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 text-emerald-400 text-[10px] font-black uppercase tracking-widest mb-6 border border-emerald-500/20"
               >
-                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 text-emerald-400 text-xs font-bold uppercase tracking-wider mb-6 border border-emerald-500/20">
-                  <Zap className="w-3 h-3" />
-                  AI-Powered Analysis
-                </div>
-                <h2 className="text-4xl font-bold mb-4 tracking-tight">Enter Website URL</h2>
-                <p className="text-zinc-400 mb-12 max-w-xl mx-auto text-lg">
-                  Paste the URL for your {typeLabels[type]} below. Our AI will perform a specialized 
-                  QA analysis tailored to this category.
-                </p>
-                <URLInput onRun={runTest} isLoading={isLoading} />
+                <Zap className="w-3 h-3 fill-current" />
+                AI-Powered Analysis Engine
               </motion.div>
-            )}
-
-            {isLoading && (
-              <motion.div 
-                key="loader"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                className="py-24"
-              >
-                <Loader status={status} />
-              </motion.div>
-            )}
-
-            {error && (
-              <motion.div 
-                key="error"
-                initial={{ scale: 0.95, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-                className="max-w-xl mx-auto p-10 rounded-3xl border border-red-500/20 bg-red-500/5 text-center shadow-2xl shadow-red-500/5"
-              >
-                <div className="w-20 h-20 rounded-full bg-red-500/10 flex items-center justify-center text-red-500 mx-auto mb-6 border border-red-500/20">
-                  <AlertCircle className="w-10 h-10" />
-                </div>
-                <h3 className="text-2xl font-bold text-red-400 mb-3">Testing Failed</h3>
-                <p className="text-zinc-400 text-sm mb-8 leading-relaxed">{error}</p>
-                <button 
-                  onClick={() => setError(null)}
-                  className="px-10 py-4 bg-zinc-800 hover:bg-zinc-700 rounded-2xl text-sm font-bold transition-all border border-border shadow-lg"
-                >
-                  Try Again
-                </button>
-              </motion.div>
-            )}
-
-            {reportData && !isLoading && (
-              <motion.div 
-                key="report"
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="space-y-12"
-              >
-                <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
-                  <div>
-                    <button 
-                      onClick={() => setReportData(null)}
-                      className="flex items-center gap-2 text-zinc-500 hover:text-zinc-300 text-sm transition-colors mb-4"
-                    >
-                      <ChevronLeft className="w-4 h-4" />
-                      Back to New Test
-                    </button>
-                    <h2 className="text-3xl font-bold tracking-tight">Audit Results</h2>
-                    <p className="text-zinc-500 mt-1">Detailed analysis for your {typeLabels[type]}</p>
+              <h2 className="text-3xl sm:text-5xl font-black mb-4 tracking-tighter">Analyze Your Website</h2>
+              <p className="text-zinc-400 mb-12 max-w-xl mx-auto text-base sm:text-lg font-medium leading-relaxed">
+                Paste the URL for your {typeLabels[type]} below. Our neural agents will perform a specialized 
+                QA audit tailored to your industry.
+              </p>
+              <URLInput onRun={runTest} isLoading={isLoading} />
+              
+              <div className="mt-16 grid grid-cols-1 sm:grid-cols-3 gap-6 max-w-4xl mx-auto">
+                {[
+                  { icon: Search, label: 'Deep Crawl', desc: 'Full site structure analysis' },
+                  { icon: Zap, label: 'Performance', desc: 'Lighthouse & Core Web Vitals' },
+                  { icon: AlertCircle, label: 'Issue Detection', desc: 'Automated bug finding' }
+                ].map((feature, i) => (
+                  <div key={i} className="p-6 rounded-2xl bg-zinc-900/30 border border-border/50">
+                    <feature.icon className="w-6 h-6 text-emerald-500 mx-auto mb-3" />
+                    <h4 className="font-bold text-sm mb-1">{feature.label}</h4>
+                    <p className="text-xs text-zinc-500">{feature.desc}</p>
                   </div>
+                ))}
+              </div>
+            </motion.div>
+          )}
+
+          {isLoading && (
+            <motion.div 
+              key="loader"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="py-24"
+            >
+              <Loader status={status} />
+            </motion.div>
+          )}
+
+          {error && (
+            <motion.div 
+              key="error"
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              className="max-w-xl mx-auto p-8 sm:p-10 rounded-3xl border border-red-500/20 bg-red-500/5 text-center shadow-2xl shadow-red-500/5"
+            >
+              <div className="w-20 h-20 rounded-full bg-red-500/10 flex items-center justify-center text-red-500 mx-auto mb-6 border border-red-500/20 animate-pulse">
+                <AlertCircle className="w-10 h-10" />
+              </div>
+              <h3 className="text-2xl font-black text-red-400 mb-3 tracking-tight">Audit Interrupted</h3>
+              <p className="text-zinc-400 text-sm mb-8 leading-relaxed font-medium">{error}</p>
+              <button 
+                onClick={() => setError(null)}
+                className="w-full sm:w-auto px-10 py-4 bg-zinc-800 hover:bg-zinc-700 rounded-2xl text-sm font-black transition-all border border-border shadow-lg"
+              >
+                Try Again
+              </button>
+            </motion.div>
+          )}
+
+          {reportData && !isLoading && (
+            <motion.div 
+              key="report"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="space-y-8 sm:space-y-12"
+            >
+              <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+                <div>
+                  <button 
+                    onClick={() => {
+                      setReportData(null);
+                      navigate('/dashboard?type=' + type, { replace: true, state: {} });
+                    }}
+                    className="flex items-center gap-2 text-zinc-500 hover:text-zinc-300 text-sm font-bold transition-colors mb-4 group"
+                  >
+                    <ChevronLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
+                    Back to New Test
+                  </button>
                   <div className="flex items-center gap-3">
-                    <button className="flex items-center gap-2 px-4 py-2.5 bg-zinc-800 hover:bg-zinc-700 rounded-xl text-sm font-bold transition-all border border-border">
-                      <Share2 className="w-4 h-4" />
-                      Share
-                    </button>
-                    <button className="flex items-center gap-2 px-5 py-2.5 bg-emerald-500 hover:bg-emerald-400 text-white rounded-xl text-sm font-bold transition-all shadow-lg shadow-emerald-500/20">
-                      <Download className="w-4 h-4" />
-                      Export PDF
-                    </button>
+                    <h2 className="text-3xl sm:text-4xl font-black tracking-tighter">Audit Intelligence</h2>
+                    {showSuccess && (
+                      <motion.div 
+                        initial={{ opacity: 0, x: -10 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        className="flex items-center gap-1.5 px-2 py-1 rounded bg-emerald-500/10 text-emerald-500 text-[10px] font-black uppercase tracking-widest border border-emerald-500/20"
+                      >
+                        <CheckCircle2 className="w-3 h-3" />
+                        Saved to History
+                      </motion.div>
+                    )}
                   </div>
+                  <p className="text-zinc-500 mt-1 font-medium">Comprehensive QA assessment for your {typeLabels[type]}</p>
                 </div>
-
-                {/* New Structured Sections */}
-                {reportData.executiveSummary && reportData.lighthouseScores && (
-                  <DashboardMetrics 
-                    executiveSummary={reportData.executiveSummary} 
-                    lighthouseScores={reportData.lighthouseScores} 
-                  />
-                )}
-
-                {reportData.issues && (
-                  <IssueTable issues={reportData.issues} />
-                )}
-
-                <div className="pt-8 border-t border-border">
-                  <ReportDisplay report={reportData.report} />
+                <div className="flex items-center gap-3">
+                  <button className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-5 py-3 bg-zinc-900 border border-border hover:bg-zinc-800 rounded-2xl text-sm font-black transition-all group">
+                    <Share2 className="w-4 h-4 group-hover:scale-110 transition-transform" />
+                    Share
+                  </button>
+                  <button className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-6 py-3 bg-emerald-500 hover:bg-emerald-400 text-white rounded-2xl text-sm font-black transition-all shadow-lg shadow-emerald-500/20 group">
+                    <Download className="w-4 h-4 group-hover:translate-y-0.5 transition-transform" />
+                    Export PDF
+                  </button>
                 </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </div>
-      </main>
-    </motion.div>
+              </div>
+
+              {/* Structured Sections */}
+              {reportData.executiveSummary && reportData.lighthouseScores && (
+                <DashboardMetrics 
+                  executiveSummary={reportData.executiveSummary} 
+                  lighthouseScores={reportData.lighthouseScores} 
+                />
+              )}
+
+              {reportData.issues && (
+                <IssueTable issues={reportData.issues} />
+              )}
+
+              <div className="pt-12 border-t border-border">
+                <ReportDisplay report={reportData.report} />
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
+    </Layout>
   );
 }

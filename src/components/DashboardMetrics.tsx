@@ -1,6 +1,8 @@
 import { motion } from 'motion/react';
-import { Shield, AlertTriangle, CheckCircle, Activity, Search, Globe, ShieldCheck } from 'lucide-react';
+import { Shield, AlertTriangle, CheckCircle, Activity, Search, Globe, ShieldCheck, Zap } from 'lucide-react';
 import { LighthouseScore } from '../types';
+import AnimatedCounter from './AnimatedCounter';
+import { cn } from '../utils/cn';
 
 interface DashboardMetricsProps {
   executiveSummary: {
@@ -39,168 +41,194 @@ export default function DashboardMetrics({ executiveSummary, lighthouseScores }:
   };
 
   return (
-    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
       {/* Overall Health Section */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="col-span-1 md:col-span-2 bg-zinc-900/50 border border-border rounded-2xl p-8 flex flex-col md:flex-row items-center gap-8">
-          <div className="relative w-32 h-32 flex items-center justify-center">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <motion.div 
+          whileHover={{ y: -4 }}
+          className="col-span-1 lg:col-span-2 bg-zinc-900/50 border border-border rounded-3xl p-8 flex flex-col md:flex-row items-center gap-10 relative overflow-hidden group"
+        >
+          <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-500/5 blur-[100px] -mr-32 -mt-32 rounded-full group-hover:bg-emerald-500/10 transition-colors duration-700" />
+          
+          <div className="relative w-40 h-40 flex items-center justify-center shrink-0">
             <svg className="w-full h-full transform -rotate-90">
               <circle
-                cx="64"
-                cy="64"
-                r="58"
+                cx="80"
+                cy="80"
+                r="72"
                 stroke="currentColor"
-                strokeWidth="8"
+                strokeWidth="10"
                 fill="transparent"
                 className="text-zinc-800"
               />
-              <circle
-                cx="64"
-                cy="64"
-                r="58"
+              <motion.circle
+                cx="80"
+                cy="80"
+                r="72"
                 stroke="currentColor"
-                strokeWidth="8"
+                strokeWidth="10"
                 fill="transparent"
-                strokeDasharray={364.4}
-                strokeDashoffset={364.4 - (364.4 * executiveSummary.overallScore) / 100}
+                strokeDasharray={452.4}
+                initial={{ strokeDashoffset: 452.4 }}
+                animate={{ strokeDashoffset: 452.4 - (452.4 * executiveSummary.overallScore) / 100 }}
+                transition={{ duration: 2, ease: "easeOut" }}
                 className={getScoreColor(executiveSummary.overallScore)}
               />
             </svg>
             <div className="absolute inset-0 flex flex-col items-center justify-center">
-              <span className="text-3xl font-bold">{executiveSummary.overallScore}</span>
-              <span className="text-[10px] uppercase tracking-wider text-zinc-500 font-bold">Score</span>
+              <span className="text-5xl font-black tracking-tighter">
+                <AnimatedCounter value={executiveSummary.overallScore} />
+              </span>
+              <span className="text-[10px] uppercase tracking-[0.2em] text-zinc-500 font-black mt-1">Overall Score</span>
             </div>
           </div>
           
-          <div className="flex-1 space-y-4 text-center md:text-left">
+          <div className="flex-1 space-y-6 text-center md:text-left z-10">
             <div>
-              <h3 className="text-2xl font-bold flex items-center justify-center md:justify-start gap-2">
-                Health Grade: <span className={getScoreColor(executiveSummary.overallScore)}>{executiveSummary.healthGrade}</span>
-              </h3>
-              <p className="text-zinc-500 text-sm mt-1">Audit performed on {new Date(executiveSummary.auditDate).toLocaleDateString()}</p>
+              <div className="flex items-center justify-center md:justify-start gap-3 mb-2">
+                <h3 className="text-3xl font-black tracking-tight">
+                  Health Grade: <span className={getScoreColor(executiveSummary.overallScore)}>{executiveSummary.healthGrade}</span>
+                </h3>
+                <div className={cn(
+                  "px-3 py-1 rounded-full border text-[10px] font-black uppercase tracking-wider flex items-center gap-1.5",
+                  getRiskColor(executiveSummary.riskLevel)
+                )}>
+                  <Shield className="w-3 h-3" />
+                  {executiveSummary.riskLevel} Risk
+                </div>
+              </div>
+              <p className="text-zinc-500 text-sm font-medium">Audit performed on {new Date(executiveSummary.auditDate).toLocaleDateString(undefined, { dateStyle: 'long' })}</p>
             </div>
             
-            <div className="flex flex-wrap items-center justify-center md:justify-start gap-3">
-              <div className={`px-3 py-1 rounded-full border text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 ${getRiskColor(executiveSummary.riskLevel)}`}>
-                <Shield className="w-3 h-3" />
-                {executiveSummary.riskLevel} Risk
+            <div className="grid grid-cols-3 gap-4">
+              <div className="bg-zinc-800/30 border border-border rounded-2xl p-4 group/stat hover:bg-zinc-800/50 transition-colors">
+                <div className="text-2xl font-black text-red-500 mb-1">
+                  <AnimatedCounter value={executiveSummary.issueBreakdown.high} />
+                </div>
+                <div className="text-[10px] uppercase text-zinc-500 font-black tracking-wider">High Issues</div>
               </div>
-              <div className="px-3 py-1 rounded-full border border-border bg-zinc-800/50 text-xs font-bold uppercase tracking-wider text-zinc-400 flex items-center gap-1.5">
-                <Activity className="w-3 h-3" />
-                Automated Audit
+              <div className="bg-zinc-800/30 border border-border rounded-2xl p-4 group/stat hover:bg-zinc-800/50 transition-colors">
+                <div className="text-2xl font-black text-amber-500 mb-1">
+                  <AnimatedCounter value={executiveSummary.issueBreakdown.medium} />
+                </div>
+                <div className="text-[10px] uppercase text-zinc-500 font-black tracking-wider">Medium Issues</div>
+              </div>
+              <div className="bg-zinc-800/30 border border-border rounded-2xl p-4 group/stat hover:bg-zinc-800/50 transition-colors">
+                <div className="text-2xl font-black text-emerald-500 mb-1">
+                  <AnimatedCounter value={executiveSummary.issueBreakdown.low} />
+                </div>
+                <div className="text-[10px] uppercase text-zinc-500 font-black tracking-wider">Low Issues</div>
               </div>
             </div>
           </div>
+        </motion.div>
 
-          <div className="grid grid-cols-3 gap-4 w-full md:w-auto">
-            <div className="text-center p-3 rounded-xl bg-red-500/5 border border-red-500/10">
-              <div className="text-xl font-bold text-red-500">{executiveSummary.issueBreakdown.high}</div>
-              <div className="text-[10px] uppercase text-zinc-500 font-bold">High</div>
-            </div>
-            <div className="text-center p-3 rounded-xl bg-amber-500/5 border border-amber-500/10">
-              <div className="text-xl font-bold text-amber-500">{executiveSummary.issueBreakdown.medium}</div>
-              <div className="text-[10px] uppercase text-zinc-500 font-bold">Med</div>
-            </div>
-            <div className="text-center p-3 rounded-xl bg-emerald-500/5 border border-emerald-500/10">
-              <div className="text-xl font-bold text-emerald-500">{executiveSummary.issueBreakdown.low}</div>
-              <div className="text-[10px] uppercase text-zinc-500 font-bold">Low</div>
-            </div>
+        <motion.div 
+          whileHover={{ y: -4 }}
+          className="bg-emerald-500/5 border border-emerald-500/20 rounded-3xl p-8 flex flex-col items-center justify-center text-center relative overflow-hidden group"
+        >
+          <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-700" />
+          <div className="w-20 h-20 rounded-2xl bg-emerald-500/10 flex items-center justify-center text-emerald-500 mb-6 group-hover:scale-110 transition-transform duration-500 shadow-inner">
+            <ShieldCheck className="w-10 h-10" />
           </div>
-        </div>
-
-        <div className="bg-emerald-500/5 border border-emerald-500/20 rounded-2xl p-8 flex flex-col items-center justify-center text-center">
-          <div className="w-16 h-16 rounded-full bg-emerald-500/10 flex items-center justify-center text-emerald-500 mb-4">
-            <ShieldCheck className="w-8 h-8" />
-          </div>
-          <h4 className="font-bold text-lg mb-2">Security Status</h4>
-          <p className="text-zinc-400 text-sm leading-relaxed">
+          <h4 className="font-black text-xl mb-3 tracking-tight">Security Status</h4>
+          <p className="text-zinc-400 text-sm leading-relaxed font-medium">
             All primary security protocols analyzed. No critical vulnerabilities detected in standard headers.
           </p>
-        </div>
+          <div className="mt-6 flex items-center gap-2 text-emerald-500 text-[10px] font-black uppercase tracking-widest">
+            <CheckCircle className="w-3 h-3" />
+            Verified Secure
+          </div>
+        </motion.div>
       </div>
 
       {/* Performance Metrics Section */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-6">
         <MetricCard 
           icon={<Zap className="w-5 h-5" />} 
           label="Performance" 
           score={lighthouseScores.performance.score} 
           status={lighthouseScores.performance.label} 
+          delay={0.1}
         />
         <MetricCard 
           icon={<Globe className="w-5 h-5" />} 
           label="Accessibility" 
           score={lighthouseScores.accessibility.score} 
           status={lighthouseScores.accessibility.label} 
+          delay={0.2}
         />
         <MetricCard 
           icon={<Search className="w-5 h-5" />} 
           label="SEO" 
           score={lighthouseScores.seo.score} 
           status={lighthouseScores.seo.label} 
+          delay={0.3}
         />
         <MetricCard 
           icon={<ShieldCheck className="w-5 h-5" />} 
           label="Best Practices" 
           score={lighthouseScores.bestPractices.score} 
           status={lighthouseScores.bestPractices.label} 
+          delay={0.4}
         />
       </div>
     </div>
   );
 }
 
-function MetricCard({ icon, label, score, status }: { icon: React.ReactNode, label: string, score: number, status: string }) {
+function MetricCard({ icon, label, score, status, delay }: { icon: React.ReactNode, label: string, score: number, status: string, delay: number }) {
   const getStatusColor = (s: string) => {
     switch (s) {
-      case 'Excellent': return 'text-emerald-500 bg-emerald-500/10';
-      case 'Good': return 'text-amber-500 bg-amber-500/10';
-      case 'Poor': return 'text-red-500 bg-red-500/10';
-      default: return 'text-zinc-500 bg-zinc-500/10';
+      case 'Excellent': return 'text-emerald-500 bg-emerald-500/10 border-emerald-500/20';
+      case 'Good': return 'text-amber-500 bg-amber-500/10 border-amber-500/20';
+      case 'Poor': return 'text-red-500 bg-red-500/10 border-red-500/20';
+      default: return 'text-zinc-500 bg-zinc-500/10 border-zinc-500/20';
     }
   };
 
   return (
-    <div className="bg-zinc-900/50 border border-border rounded-2xl p-6 space-y-4">
+    <motion.div 
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay }}
+      whileHover={{ y: -4 }}
+      className="bg-zinc-900/50 border border-border rounded-3xl p-6 space-y-6 group hover:bg-zinc-800/50 transition-all duration-300"
+    >
       <div className="flex items-center justify-between">
-        <div className="w-10 h-10 rounded-xl bg-zinc-800 flex items-center justify-center text-zinc-400">
+        <div className="w-12 h-12 rounded-2xl bg-zinc-800 flex items-center justify-center text-zinc-400 group-hover:text-emerald-400 group-hover:scale-110 transition-all duration-300">
           {icon}
         </div>
-        <div className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${getStatusColor(status)}`}>
+        <div className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider border ${getStatusColor(status)}`}>
           {status}
         </div>
       </div>
       <div>
-        <div className="text-sm text-zinc-500 font-medium">{label}</div>
-        <div className="text-3xl font-bold mt-1">{score}</div>
+        <div className="text-xs text-zinc-500 font-black uppercase tracking-widest mb-1">{label}</div>
+        <div className="text-4xl font-black tracking-tighter">
+          <AnimatedCounter value={score} />
+        </div>
       </div>
-      <div className="w-full h-1.5 bg-zinc-800 rounded-full overflow-hidden">
-        <motion.div 
-          initial={{ width: 0 }}
-          animate={{ width: `${score}%` }}
-          transition={{ duration: 1, ease: "easeOut" }}
-          className={`h-full rounded-full ${score >= 90 ? 'bg-emerald-500' : score >= 50 ? 'bg-amber-500' : 'bg-red-500'}`}
-        />
+      <div className="space-y-2">
+        <div className="w-full h-2 bg-zinc-800 rounded-full overflow-hidden">
+          <motion.div 
+            initial={{ width: 0 }}
+            animate={{ width: `${score}%` }}
+            transition={{ duration: 1.5, ease: "easeOut", delay: delay + 0.2 }}
+            className={cn(
+              "h-full rounded-full",
+              score >= 90 ? 'bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.5)]' : 
+              score >= 50 ? 'bg-amber-500 shadow-[0_0_10px_rgba(245,158,11,0.5)]' : 
+              'bg-red-500 shadow-[0_0_10px_rgba(239,68,68,0.5)]'
+            )}
+          />
+        </div>
+        <div className="flex justify-between text-[10px] font-black text-zinc-600 uppercase tracking-widest">
+          <span>0</span>
+          <span>100</span>
+        </div>
       </div>
-    </div>
+    </motion.div>
   );
 }
 
-function Zap(props: any) {
-  return (
-    <svg
-      {...props}
-      xmlns="http://www.w3.org/2000/svg"
-      width="24"
-      height="24"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
-    </svg>
-  );
-}
