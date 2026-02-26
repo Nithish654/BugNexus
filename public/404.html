@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <title>BugNexus AI - Redirecting...</title>
+    <script type="text/javascript">
+        // Redirect to index.html with the original path stored in sessionStorage
+        var path = window.location.pathname;
+        var search = window.location.search;
+        sessionStorage.redirect = path + search;
+
+        // Redirect to the base path of the app
+        window.location.replace("/BugNexus/");
+    </script>
+</head>
+
+<body>
+</body>
+
+</html>
